@@ -1,0 +1,9 @@
+/.envrc.local
+/result
+/id_rke
+/cluster.yml
+
+
+*.tfstate
+*.tfstate.backup
+.terraform
