@@ -47,37 +47,40 @@ locals {
     echo "node-ip: $internal_ip" >> /etc/rancher/rke2/config.yaml
   EOC
 
-  # This installs the Hetzner Cloud Controller Manager if enabled (the default)
-  #
   # We can't provide additional files in /var/lib/rancher/rke2/server/manifests during startup,
   # as these get overwritten on startup apparently
-  # Until addons are supported in RKE2 (https://github.com/rancher/rke2/issues/568), let's NOT
-  # do that.
-  install_script_post = ! var.setup_hetzner_ccm ? "" : <<-EOS
-    curl -sfL https://raw.githubusercontent.com/hetznercloud/hcloud-cloud-controller-manager/v1.8.1/deploy/ccm.yaml > /var/lib/rancher/custom_rke2_addons/hetzner_ccm.yaml
-    cat << EOF > /var/lib/rancher/custom_rke2_addons/nginx-use-loadbalancer.yaml
-     apiVersion: helm.cattle.io/v1
-     kind: HelmChartConfig
-     metadata:
-       name: rke2-ingress-nginx
-       namespace: kube-system
-     spec:
-       valuesContent: |-
-         controller:
-           kind: Deployment
-           autoscaling:
-             enabled: true
-             minReplicas: 2
-             maxReplicas: 5
-           hostNetwork: false
-           service:
-             enabled: true
-             type: LoadBalancer
-             externalTrafficPolicy: Local
-             annotations:
-               load-balancer.hetzner.cloud/location: nbg1
-    EOF
-  EOS
+  # Until addons are supported in RKE2
+  # (https://github.com/rancher/rke2/issues/568), we drop it in
+  # /var/lib/rancher/custom_rke2_addons, which is a poormans alternative to it.
+  install_script_post = join("\n", [
+    # This installs the Hetzner Cloud Controller Manager if enabled (the default)
+    var.setup_hetzner_ccm ? <<-EOQ
+      curl -sfL https://raw.githubusercontent.com/hetznercloud/hcloud-cloud-controller-manager/v1.8.1/deploy/ccm.yaml > /var/lib/rancher/custom_rke2_addons/hetzner_ccm.yaml
+      cat << EOG > /var/lib/rancher/custom_rke2_addons/nginx-use-loadbalancer.yaml
+      apiVersion: helm.cattle.io/v1
+      kind: HelmChartConfig
+      metadata:
+        name: rke2-ingress-nginx
+        namespace: kube-system
+      spec:
+        valuesContent: |-
+          controller:
+            kind: Deployment
+            autoscaling:
+              enabled: true
+              minReplicas: 2
+              maxReplicas: 5
+            hostNetwork: false
+            service:
+              enabled: true
+              type: LoadBalancer
+              externalTrafficPolicy: Local
+              annotations:
+                load-balancer.hetzner.cloud/location: nbg1
+      EOG
+    EOQ
+    : ""
+  ])
 }
 
 module "rke2_cloudconfig_server_bootstrap" {
