@@ -27,6 +27,16 @@ locals {
     ] : []
   }
 
+  # Before running the installation script, but after cloud-init already provided the
+  # /etc/rancher/rke2/config.yaml file, annotate it with the internal ip
+  # adresses retrieved from the hcloud metadata server.
+  # This is somewhat terrifying, but given there's no yq available on fedora,
+  # use some bash :-)
+  install_script_pre = <<-EOC
+    internal_ip=$(curl -sfL http://169.254.169.254/hetzner/v1/metadata/private-networks | grep "ip:" | head -n 1| cut -d ":" -f2 | xargs)
+    echo "node-ip: $internal_ip" >> /etc/rancher/rke2/config.yaml
+  EOC
+
   # This installs the Hetzner Cloud Controller Manager if enabled (the default)
   #
   # We can't provide additional files in /var/lib/rancher/rke2/server/manifests during startup,
@@ -66,6 +76,7 @@ module "rke2_cloudconfig_server_bootstrap" {
   server_tls_san      = local.rke2_tls_san
   node_taint          = (! var.controlplane_has_worker) ? ["CriticalAddonsOnly=true:NoExecute"] : []
   install_rke2_type   = "server"
+  install_script_pre  = local.install_script_pre
   install_script_post = local.install_script_post
   extra_config        = local.k8s_extra_config
 }
@@ -77,6 +88,7 @@ module "rke2_cloudconfig_server" {
   node_taint          = (! var.controlplane_has_worker) ? ["CriticalAddonsOnly=true:NoExecute"] : []
   install_rke2_type   = "server"
   server_url          = local.rke2_server_url
+  install_script_pre = local.install_script_pre
   install_script_post = local.install_script_post
   extra_config        = local.k8s_extra_config
 }
@@ -86,6 +98,7 @@ module "rke2_cloudconfig_agent" {
   rke2_token          = random_string.rke2_token.result
   install_rke2_type   = "agent"
   server_url          = local.rke2_server_url
+  install_script_pre = local.install_script_pre
   install_script_post = local.install_script_post
   extra_config        = local.k8s_extra_config
 }
