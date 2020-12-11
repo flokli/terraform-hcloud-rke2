@@ -26,8 +26,12 @@ resource "hcloud_server_network" "controlplane" {
   subnet_id = hcloud_network_subnet.nodes.id
 }
 
-output "controlplane_ips" {
+output "controlplane_ipv4s" {
   value = hcloud_server.controlplane[*].ipv4_address
+}
+
+output "controlplane_ipv6s" {
+  value = hcloud_server.controlplane[*].ipv6_address
 }
 
 # These are worker-only nodes
@@ -51,6 +55,10 @@ resource "hcloud_server_network" "worker" {
   subnet_id = hcloud_network_subnet.nodes.id
 }
 
-output "worker_ips" {
+output "worker_ipv4s" {
   value = hcloud_server.worker[*].ipv4_address
+}
+
+output "worker_ipv6s" {
+  value = hcloud_server.worker[*].ipv6_address
 }

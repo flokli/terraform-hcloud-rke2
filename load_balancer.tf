@@ -42,12 +42,12 @@ resource "hcloud_load_balancer_service" "controlplane_rke_management" {
   destination_port = "9345"
 }
 
-output "controlplane_ipv4" {
+output "controlplane_lb_ipv4" {
   value       = hcloud_load_balancer.controlplane.ipv4
   description = "The IPv4 address of the load balancer exposing the controlplane."
 }
 
-output "controlplane_ipv6" {
+output "controlplane_lb_ipv6" {
   value       = hcloud_load_balancer.controlplane.ipv6
   description = "The IPv4 address of the load balancer exposing the controlplane."
 }
