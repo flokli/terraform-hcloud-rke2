@@ -1,4 +1,4 @@
-# hcloud-rke
+# terraform-hcloud-rke2
 
 This spins up a RKE2 cluster on hcloud.
 
