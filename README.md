@@ -20,3 +20,19 @@ kubectl -n kube-system create secret generic hcloud --from-literal=token=<hcloud
 ```
 
 Please see `variables.tf` for a full list of configuration options.
+
+It exposes the following outputs:
+
+ - `controlplane_ipv{4,6}s`
+   The IPv4/IPv6 addresses of all controlplane nodes.
+ - `worker_ipv{4,6}s`
+   The IPv4/IPv6 addresses of all pure worker nodes.
+ - `controlplane_lb_ipv{4,6}`
+	 The IPv4/IPv6 address of the load balancer in front of all control planes,
+	 exposing the kube-api-server port and RKE2 management port.
+ - `ingress_lb_ipv{4,6}`
+	 The IPv4/IPv6 address of the load balancer in front of all nodes running
+	 workloads (can also be controlplane nodes), exposing port 80 and 443 from
+	 nodes running pods from the `rke2-ingress-nginx` deployment.
+	 This only applies if `setup_hetzner_ccm` is disabled, otherwise the CCM will
+	 take care of adding a load balancer.
