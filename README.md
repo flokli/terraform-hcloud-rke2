@@ -5,11 +5,11 @@ This spins up a RKE2 cluster on hcloud.
 It will create a ssh key at `ssh_key_path`.
 This is needed to ssh into the cluster for ops, as well as retrieving the initial kubeconfig.
 
-It will install
+If enabled (`setup_hetzner_ccm`), it will install
 [hcloud-cloud-controller-manager](https://github.com/hetznercloud/hcloud-cloud-controller-manager),
 and configure their internal nginx ingress controller to deploy services of
 type `LoadBalancer` - so instead of configuring the load balancer by yourself,
-it'll create one for you. This can be overridden by setting `setup_hetzner_ccm` to false.
+it'll create one for you.
 
 `hcloud-cloud-controller-manager` requires an API token to be configured. As
 the hcloud terraform provider does not allow to create API tokens on demand, this needs to be configured manually.

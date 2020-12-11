@@ -25,7 +25,7 @@ variable "controlplane_hostname" {
 variable "setup_hetzner_ccm" {
   type        = bool
   description = "Whether to set up hcloud-cloud-controller-manager and configure the nginx ingress controller to make use of it"
-  default     = true
+  default     = false
 }
 
 variable "ssh_key_path" {
