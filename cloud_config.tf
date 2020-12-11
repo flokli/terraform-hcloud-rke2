@@ -88,7 +88,7 @@ module "rke2_cloudconfig_server" {
   node_taint          = (! var.controlplane_has_worker) ? ["CriticalAddonsOnly=true:NoExecute"] : []
   install_rke2_type   = "server"
   server_url          = local.rke2_server_url
-  install_script_pre = local.install_script_pre
+  install_script_pre  = join("\n", [local.install_script_pre, "sleep 200"])
   install_script_post = local.install_script_post
   extra_config        = local.k8s_extra_config
 }
@@ -98,7 +98,7 @@ module "rke2_cloudconfig_agent" {
   rke2_token          = random_string.rke2_token.result
   install_rke2_type   = "agent"
   server_url          = local.rke2_server_url
-  install_script_pre = local.install_script_pre
+  install_script_pre  = join("\n", [local.install_script_pre, "sleep 200"])
   install_script_post = local.install_script_post
   extra_config        = local.k8s_extra_config
 }
