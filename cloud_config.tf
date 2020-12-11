@@ -27,6 +27,16 @@ locals {
     ] : []
   }
 
+  k8s_extra_config_server = merge(local.k8s_extra_config, {
+    # This configures kube-apiserver to prefer InternalIP over everything
+    # TODO(arianvp): open issue
+    # This arg is ignored by rke2 agents, so we don't need to conditionalize
+    # k8s_extra_config.
+    kube-apiserver-arg = [
+      "kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname"
+    ]
+  })
+
   # Before running the installation script, but after cloud-init already provided the
   # /etc/rancher/rke2/config.yaml file, annotate it with the internal ip
   # adresses retrieved from the hcloud metadata server.
@@ -78,7 +88,7 @@ module "rke2_cloudconfig_server_bootstrap" {
   install_rke2_type   = "server"
   install_script_pre  = local.install_script_pre
   install_script_post = local.install_script_post
-  extra_config        = local.k8s_extra_config
+  extra_config        = local.k8s_extra_config_server
 }
 
 module "rke2_cloudconfig_server" {
@@ -90,7 +100,7 @@ module "rke2_cloudconfig_server" {
   server_url          = local.rke2_server_url
   install_script_pre  = join("\n", [local.install_script_pre, "sleep 200"])
   install_script_post = local.install_script_post
-  extra_config        = local.k8s_extra_config
+  extra_config        = local.k8s_extra_config_server
 }
 
 module "rke2_cloudconfig_agent" {
