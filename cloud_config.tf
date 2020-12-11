@@ -42,9 +42,12 @@ locals {
   # adresses retrieved from the hcloud metadata server.
   # This is somewhat terrifying, but given there's no yq available on fedora,
   # use some bash :-)
+  # We also need to configure the private interface to have a static name, and drop a .link file for that
   install_script_pre = <<-EOC
     internal_ip=$(curl -sfL http://169.254.169.254/hetzner/v1/metadata/private-networks | grep "ip:" | head -n 1| cut -d ":" -f2 | xargs)
+    internal_mac=$(curl -sfL http://169.254.169.254/hetzner/v1/metadata/private-networks | grep "mac_address:" | head -n 1 | awk '{print $2}')
     echo "node-ip: $internal_ip" >> /etc/rancher/rke2/config.yaml
+    echo -e "[Match]\nMACAddress=$internal_mac\n[Link]\nName=priv" > /etc/systemd/network/80-internal.link
   EOC
 
   # We can't provide additional files in /var/lib/rancher/rke2/server/manifests during startup,
@@ -53,6 +56,20 @@ locals {
   # (https://github.com/rancher/rke2/issues/568), we drop it in
   # /var/lib/rancher/custom_rke2_addons, which is a poormans alternative to it.
   install_script_post = join("\n", [
+    <<-EOQ
+    cat <<EOF > /var/lib/rancher/custom_rke2_addons/rke2-canal-interface-name.yaml
+    apiVersion: helm.cattle.io/v1
+    kind: HelmChartConfig
+    metadata:
+      name: rke2-canal
+      namespace: kube-system
+    spec:
+      valuesContent: |-
+        flannel:
+          iface: "priv"
+    EOF
+    EOQ
+    ,
     # This installs the Hetzner Cloud Controller Manager if enabled (the default)
     var.setup_hetzner_ccm ? <<-EOQ
       curl -sfL https://raw.githubusercontent.com/hetznercloud/hcloud-cloud-controller-manager/v1.8.1/deploy/ccm.yaml > /var/lib/rancher/custom_rke2_addons/hetzner_ccm.yaml
