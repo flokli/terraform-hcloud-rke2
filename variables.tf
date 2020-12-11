@@ -7,19 +7,7 @@ variable "num_controlplane" {
 variable "controlplane_has_worker" {
   type        = bool
   description = "Whether to register the controlplane node as a worker node too"
-  default     = false
-}
-
-variable "controlplane_has_etcd" {
-  type        = bool
-  description = "Whether to deploy etcd on the controlplane nodes"
-  default     = false
-}
-
-variable "num_etcd" {
-  type        = number
-  description = "How many pure etcd nodes to deploy. Ignored if controlplane_has_etcd is true"
-  default     = 3
+  default     = true
 }
 
 variable "num_workers" {
@@ -28,8 +16,20 @@ variable "num_workers" {
   default     = 3
 }
 
-variable "cluster_config_path" {
+variable "controlplane_hostname" {
   type        = string
-  description = "The path to persist the cluster.yaml file to. RKE will create this file, and a statefile alongside."
-  default     = "cluster.yml"
+  description = "The DNS hostname pointing to the load balancer created here. If set, nodes will be configured to contact it, instead of its IPv4 address. Make sure to pass this in as a string, and when creating the record, use the controlplane_ipv4 output as a value, so you can create the record while machines are booting up (and this module returned)"
+  default     = null
+}
+
+variable "setup_hetzner_ccm" {
+  type        = bool
+  description = "Whether to set up hcloud-cloud-controller-manager and configure the nginx ingress controller to make use of it"
+  default     = true
+}
+
+variable "ssh_key_path" {
+  type        = string
+  description = "The path to persist the ssh key path to."
+  default     = "id_root"
 }

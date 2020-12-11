@@ -1,33 +1,22 @@
-# This creates a ssh private key that can be used for root login.
-# It's mostly there to make hcloud not send emails :-)
-resource "tls_private_key" "root" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "random_pet" "ssh_key_root" {
-}
-
 resource "hcloud_ssh_key" "root" {
-  name       = "root-${random_pet.ssh_key_root.id}"
+  name       = "root-${random_pet.cluster_name.id}"
   public_key = tls_private_key.root.public_key_openssh
 }
 
-# These are controlplane nodes.
-# They optionally also run worker payloads and etcd.
+# These are controlplane nodes, running etcd.
+# They optionally also run worker payloads.
 resource "hcloud_server" "controlplane" {
   count       = var.num_controlplane
-  name        = "controlplane-${count.index}"
-  image       = "ubuntu-20.04"
-  server_type = "cpx41"
+  name        = "controlplane-${random_pet.cluster_name.id}-${count.index}"
+  image       = "fedora-32"
+  server_type = "cx11"
   ssh_keys    = [hcloud_ssh_key.root.name]
   location    = "nbg1"
   labels = merge(
     { "role-controlplane" = "1" },
-    var.controlplane_has_etcd ? { "role-etcd" = "1" } : {},
     var.controlplane_has_worker ? { "role-worker" = "1" } : {}
   )
-  user_data = local.userdata_ubuntu_docker
+  user_data = count.index == 0 ? local.userdata_server_bootstrap : local.userdata_server
 }
 
 # Attach controlplane nodes to the private network.
@@ -41,45 +30,21 @@ output "controlplane_ips" {
   value = hcloud_server.controlplane[*].ipv4_address
 }
 
-# These are etcd-only nodes. We only deploy them if controlplane_has_etcd is
-# false.
-resource "hcloud_server" "etcd" {
-  count       = var.controlplane_has_etcd ? 0 : var.num_etcd
-  name        = "etcd-${count.index}"
-  image       = "ubuntu-20.04"
-  server_type = "cpx21"
-  ssh_keys    = [hcloud_ssh_key.root.name]
-  location    = "nbg1"
-  labels = { "role-etcd" = "1" }
-  user_data   = local.userdata_ubuntu_docker
-}
-
-output "etcd_ips" {
-  value = hcloud_server.etcd[*].ipv4_address
-}
-
-# Attach etcd nodes to the private network.
-resource "hcloud_server_network" "etcd" {
-  count     = var.controlplane_has_etcd ? 0 : var.num_etcd
-  server_id = hcloud_server.etcd[count.index].id
-  subnet_id = hcloud_network_subnet.nodes.id
-}
-
 # These are worker-only nodes
 resource "hcloud_server" "worker" {
   count       = var.num_workers
-  name        = "worker-${count.index}"
-  image       = "ubuntu-20.04"
-  server_type = "cpx41"
+  name        = "worker-${random_pet.cluster_name.id}-${count.index}"
+  image       = "fedora-32"
+  server_type = "cx11"
   ssh_keys    = [hcloud_ssh_key.root.name]
   location    = "nbg1"
-  labels = { "role-worker" = "1" }
-  user_data   = local.userdata_ubuntu_docker
+  labels      = { "role-worker" = "1" }
+  user_data   = local.userdata_agent
 }
 
 # Attach worker nodes to the private network.
-# TODO: do we need worker nodes to be on the same private network? Or shouldn't
-# they just go via the public endpoint? How does that work with controlplane_has_worker?
+# Even though they might be able to reach other nodes through their public IPs,
+# the private network (on hetzner at least) is way faster.
 resource "hcloud_server_network" "worker" {
   count     = var.num_workers
   server_id = hcloud_server.worker[count.index].id
